@@ -12,8 +12,15 @@ from termcolor import colored
 from dataprocessor import remove_duplicate_posts
 
 def load_communities_dict():
-    with open('communities_dict.json', 'r') as f:
-        return json.load(f)
+    try:
+        with open('communities_dict.json', 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(colored("Error: 'communities_dict.json' file not found.", "red"))
+        exit(1)
+    except json.JSONDecodeError:
+        print(colored("Error: Failed to decode JSON from 'communities_dict.json'.", "red"))
+        exit(1)
 
 def get_random_user_agent(user_agent_list):
     return random.choice(user_agent_list)
@@ -30,46 +37,64 @@ def configure_parser():
     return parser.parse_args()
 
 def select_community(communities_dict):
-    community_options = inquirer.fuzzy(
-        message="Search and select a community from the list below:",
-        choices=list(communities_dict.keys()),
-        max_height="35%",
-        border = True,
-        style = get_style({
-            
-            "question": "green",
-            "fuzzy_prompt": "orange",
-            "fuzzy_info": "orange",
-            "fuzzy_match": "orange",
-            "questionmark": "cyan",
-            "pointer": "#61afef",
-        })
-    ).execute()
-    return communities_dict[community_options]
+    try:
+        community_options = inquirer.fuzzy(
+            message="Search and select a community from the list below:",
+            choices=list(communities_dict.keys()),
+            max_height="35%",
+            border=True,
+            style=get_style({
+                "question": "green",
+                "fuzzy_prompt": "orange",
+                "fuzzy_info": "orange",
+                "fuzzy_match": "orange",
+                "questionmark": "cyan",
+                "pointer": "#61afef",
+            })
+        ).execute()
+        return communities_dict[community_options]
+    except KeyError:
+        print(colored("Error: Selected community not found in the dictionary.", "red"))
+        exit(1)
 
 def fetch_page(session, url):
-    response = session.get(url)
-    return response
+    try:
+        response = session.get(url)
+        response.raise_for_status()
+        return response
+    except requests.RequestException as e:
+        print(colored(f"Error fetching page: {e}", "red"))
+        return None
 
 def parse_posts(soup, base_url):
-    posts = soup.select('.pb-head')
-    post_urls = [urljoin(base_url, post.find('a', id='post-title-link').get('href')) for post in posts]
-    return [url for url in post_urls if url.startswith(f"{base_url}discussion/")]
+    try:
+        posts = soup.select('.pb-head')
+        post_urls = [urljoin(base_url, post.find('a', id='post-title-link').get('href')) for post in posts]
+        return [url for url in post_urls if url.startswith(f"{base_url}discussion/")]
+    except Exception as e:
+        print(colored(f"Error parsing posts: {e}", "red"))
+        return []
 
 def process_post(session, post_url, output_file, file_lock):
-    post_response = session.get(post_url)
-    post_soup = BeautifulSoup(post_response.content, "html.parser")
-    post_title = post_soup.find('a', id='post-title-link').text.strip() if post_soup.find('a', id='post-title-link') else 'No title'
-    post_content = post_soup.find("div", id="post-snippet").get_text(strip=True) if post_soup.find("div", id="post-snippet") else ""
-    reply_divs = post_soup.find_all("div", id="replyContent")
-    post_replies = " ".join([div.get_text(strip=True) for div in reply_divs])
+    try:
+        post_response = session.get(post_url)
+        post_response.raise_for_status()
+        post_soup = BeautifulSoup(post_response.content, "html.parser")
+        post_title = post_soup.find('a', id='post-title-link').text.strip() if post_soup.find('a', id='post-title-link') else 'No title'
+        post_content = post_soup.find("div", id="post-snippet").get_text(strip=True) if post_soup.find("div", id="post-snippet") else ""
+        reply_divs = post_soup.find_all("div", id="replyContent")
+        post_replies = " ".join([div.get_text(strip=True) for div in reply_divs])
 
-    with file_lock:
-        with open(output_file, 'a', encoding='utf-8') as file:
-            file.write(f"Title: {post_title}\n")
-            file.write(f"Content: {post_content}\n")
-            file.write(f"Replies: {post_replies}\n")
-            file.write("-------\n")
+        with file_lock:
+            with open(output_file, 'a', encoding='utf-8') as file:
+                file.write(f"Title: {post_title}\n")
+                file.write(f"Content: {post_content}\n")
+                file.write(f"Replies: {post_replies}\n")
+                file.write("-------\n")
+    except requests.RequestException as e:
+        print(colored(f"Error fetching post: {e}", "red"))
+    except Exception as e:
+        print(colored(f"Error processing post: {e}", "red"))
 
 def process_page(session, post_links, output_file):
     file_lock = threading.Lock()
@@ -80,13 +105,21 @@ def process_page(session, post_links, output_file):
         thread.join()
 
 def get_last_post_stamp(session, url):
-    response = session.get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
-    stamp_text = soup.find('div', id='post-date').get_text(strip=True) if soup.find('div', id='post-date') else None
-    stamp_str = "".join(stamp_text.split('•')) if stamp_text else None
-    if "edited" in stamp_str:
-        stamp_str = stamp_str.split("(edited")[0].strip()
-    return datetime.strptime(stamp_str, "%b %d, %Y  %I:%M %p")
+    try:
+        response = session.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, "html.parser")
+        stamp_text = soup.find('div', id='post-date').get_text(strip=True) if soup.find('div', id='post-date') else None
+        stamp_str = "".join(stamp_text.split('•')) if stamp_text else None
+        if "edited" in stamp_str:
+            stamp_str = stamp_str.split("(edited")[0].strip()
+        return datetime.strptime(stamp_str, "%b %d, %Y  %I:%M %p")
+    except requests.RequestException as e:
+        print(colored(f"Error fetching last post stamp: {e}", "red"))
+        return None
+    except Exception as e:
+        print(colored(f"Error parsing last post stamp: {e}", "red"))
+        return None
 
 def main():
     user_agent_list = [
@@ -114,10 +147,14 @@ def main():
             for page in range(1, args.numpages + 1):
                 url = base_url + url_params.format(page) + f"&after={page_start_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
                 response = fetch_page(session, url)
+                if response is None:
+                    continue
                 soup = BeautifulSoup(response.content, "html.parser")
                 post_links = parse_posts(soup, base_url)
                 process_page(session, post_links, args.output)
                 last_post_stamp = get_last_post_stamp(session, post_links[-1])
+                if last_post_stamp is None:
+                    continue
                 page_start_date = last_post_stamp
                 pbar.update(1)
     except Exception as e:
