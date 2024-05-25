@@ -167,5 +167,9 @@ def main():
     except Exception as e:
         print(colored(f"An error occurred: {e}", "red"))
 
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(colored("Scraping stopped by user.", "red"))
