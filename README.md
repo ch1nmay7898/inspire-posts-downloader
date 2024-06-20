@@ -26,5 +26,8 @@ python script.py -np 50 -o custom_output.txt    # Fetch 50 pages and output to c
 python script.py                                # Fetch the default 40 pages and output to posts_data.txt
 ```
 
+## Demonstration
+![Script in action](/static/render1718926585112.gif)
+
 ## Disclaimer
 Before using this scraper, please refer to the [Terms of Use](https://www.inspire.com/about/terms/) of the Inspire website. Ensure that you have the appropriate permissions to scrape data from the website. The developers of this script will not be liable for any consequences that may arise from its use, including any violations of the Terms of Use.
