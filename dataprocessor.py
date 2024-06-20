@@ -4,7 +4,6 @@ def remove_duplicate_posts(file_path):
     unique_posts = {}
     processed_data = []
 
-    # Read and process the data to remove duplicates
     with open(file_path, 'r', encoding='utf-8') as file:
         lines = file.readlines()
 
@@ -24,34 +23,10 @@ def remove_duplicate_posts(file_path):
                 processed_data.append(content + '\n')
                 processed_data.append(reply + '\n')
                 processed_data.append("-------\n")
-
-    # Write the processed data back to the same file
     with open(file_path, 'w', encoding='utf-8') as file:
         file.writelines(processed_data)
 
     return len(unique_posts)
-
-# def count_delete_empty(file_path):
-#     count_no_title = 0
-#     count_valid_titles = 0
-
-#     with open(file_path, 'r', encoding='utf-8') as file:
-#         content = file.readlines()
-
-#     with open(file_path, 'w', encoding='utf-8') as file:
-#         skip_lines = 0
-#         for i, line in enumerate(content):
-#             if skip_lines > 0:
-#                 skip_lines -= 1
-#                 continue
-#             if line.strip() == "Title: No title":
-#                 count_no_title += 1
-#                 skip_lines = 3
-#             else:
-#                 file.write(line)
-#                 if line.startswith("Title: ") and line != "Title: No title":
-#                     count_valid_titles += 1
-#     return count_no_title, count_valid_titles
 
 def main():
     parser = argparse.ArgumentParser()
