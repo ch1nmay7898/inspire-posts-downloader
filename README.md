@@ -8,6 +8,15 @@ Inspire hosts a dedicated community of nearly 140,000 EDS patients, in partnersh
 ## Overview
 The URL Posts Downloader is a Python script designed to scrape posts from inspire.com website. The script uses the `requests` library to fetch pages and `BeautifulSoup` for parsing HTML content.
 
+## Installation
+Before running the script, you need to install the required Python packages. You can do this by running the following command in your terminal:
+
+```bash
+pip install -r requirements.txt
+```
+
+This will install all the dependencies listed in the `requirements.txt` file.
+
 ## Usage
 To run the script, you can provide the number of pages to scrape and the output file path as command-line arguments.
 
